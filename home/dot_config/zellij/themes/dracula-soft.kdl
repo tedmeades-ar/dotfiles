@@ -1,0 +1,15 @@
+themes {
+    dracula-soft {
+        fg "#F8F8F2"
+        bg "#282A36"
+        black "#21222C"
+        red "#D44F4F"
+        green "#43D168"
+        yellow "#D2D870"
+        blue "#A07EE0"
+        magenta "#D468AB"
+        cyan "#6CC8DC"
+        white "#CBCCC6"
+        orange "#D49A5A"
+    }
+}

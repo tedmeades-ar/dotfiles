@@ -1,0 +1,32 @@
+# Secrets and machine-local auth
+**/auth.json
+**/.credentials.json
+**/*credentials*
+**/*token*
+**/*secret*
+**/*key
+**/*key.pub
+**/id_*
+
+# Agent state, logs, sessions, and history
+**/history.jsonl
+**/usage_log.jsonl
+**/usage-log.jsonl
+**/logs_*.sqlite*
+**/state_*.sqlite*
+**/sessions/
+**/projects/
+**/todos/
+**/paste-cache/
+**/file-history/
+**/backups/
+**/cache/
+**/stats-cache.json
+**/mcp-needs-auth-cache.json
+
+# Generic generated files
+**/.DS_Store
+**/*.swp
+**/*.tmp
+**/*.bak
+**/*~

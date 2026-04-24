@@ -1,0 +1,18 @@
+model = "gpt-5.5"
+model_reasoning_effort = "high"
+personality = "pragmatic"
+
+[projects."/home/tobias.edmeades"]
+trust_level = "trusted"
+
+[projects."/home/tobias.edmeades/my_ws/imitation_learning"]
+trust_level = "trusted"
+
+[features]
+multi_agent = true
+
+[plugins."superpowers@openai-curated"]
+enabled = true
+
+[tui.model_availability_nux]
+"gpt-5.5" = 3

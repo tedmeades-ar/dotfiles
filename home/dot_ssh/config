@@ -1,0 +1,44 @@
+Host gitlab.com
+  HostName gitlab.com
+  User tobias.edmeades@agile-robots.com
+  IdentityFile ~/.ssh/id_ed25519
+  IdentitiesOnly yes
+
+Host github.com
+  HostName github.com
+  User tedmeades-ar
+  IdentityFile ~/.ssh/argithub
+  IdentitiesOnly yes
+
+Host 4090
+  HostName 10.1.134.143
+  User guanqi.chen
+
+Host a100
+  HostName 10.1.129.200
+  User tobias.edmeades
+  ForwardAgent yes
+
+Host dgx
+  HostName 10.6.96.26
+  User tobias.edmeades
+  ForwardAgent yes
+
+Host huba102
+  HostName 192.168.0.102
+  User humanoid
+  ForwardAgent yes
+
+Host lab_pc
+  HostName 10.1.131.16
+  User guanqi.chen
+  ForwardAgent yes
+
+Host workstation
+  HostName 10.1.133.196
+  User tobias.edmeades
+  ForwardAgent yes
+
+Host blackwell6000
+  Hostname 10.1.131.195
+  User agile.datafarm
