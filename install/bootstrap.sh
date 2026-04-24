@@ -5,6 +5,7 @@ DRY_RUN=0
 SKIP_PACKAGES=0
 USE_SYSTEM_PACKAGES=0
 BIN_DIR="${DOTFILES_BIN_DIR:-$HOME/.local/bin}"
+NPM_GLOBAL_PREFIX="${DOTFILES_NPM_GLOBAL_PREFIX:-$HOME/.npm-global}"
 
 usage() {
   cat <<'USAGE'
@@ -47,7 +48,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-export PATH="$BIN_DIR:$PATH"
+export PATH="$NPM_GLOBAL_PREFIX/bin:$BIN_DIR:$PATH"
 
 say() {
   printf '%s\n' "$*"
@@ -80,7 +81,7 @@ install_packages() {
 
   if has apt-get; then
     run sudo apt-get update
-    packages=(bash git kitty ripgrep fd-find fzf bat wl-clipboard xclip curl ca-certificates tar gzip unzip keychain)
+    packages=(bash git kitty ripgrep fd-find fzf bat wl-clipboard xclip curl ca-certificates tar gzip unzip keychain nodejs npm bubblewrap)
     for package in "${packages[@]}"; do
       if ! run sudo apt-get install -y "$package"; then
         missing_packages+=("$package")
@@ -91,7 +92,7 @@ install_packages() {
   fi
 
   if has pacman; then
-    packages=(bash git kitty zellij lazygit yazi ripgrep fd fzf bat wl-clipboard xclip keychain)
+    packages=(bash git kitty zellij lazygit yazi ripgrep fd fzf bat wl-clipboard xclip keychain nodejs npm bubblewrap)
     for package in "${packages[@]}"; do
       if ! run sudo pacman -S --needed --noconfirm "$package"; then
         missing_packages+=("$package")
@@ -102,7 +103,7 @@ install_packages() {
   fi
 
   if has dnf; then
-    packages=(bash git kitty zellij lazygit ripgrep fd-find fzf bat wl-clipboard xclip curl ca-certificates tar gzip unzip keychain)
+    packages=(bash git kitty zellij lazygit ripgrep fd-find fzf bat wl-clipboard xclip curl ca-certificates tar gzip unzip keychain nodejs npm bubblewrap)
     for package in "${packages[@]}"; do
       if ! run sudo dnf install -y "$package"; then
         missing_packages+=("$package")
@@ -113,7 +114,7 @@ install_packages() {
   fi
 
   if has brew; then
-    packages=(bash git kitty zellij lazygit yazi ripgrep fd fzf bat keychain)
+    packages=(bash git kitty zellij lazygit yazi ripgrep fd fzf bat keychain node bubblewrap)
     for package in "${packages[@]}"; do
       if ! run brew install "$package"; then
         missing_packages+=("$package")
@@ -414,6 +415,58 @@ install_kitty_local() {
   rm -rf "$tmpdir"
 }
 
+ensure_npm_global_dir() {
+  if [ "$SKIP_PACKAGES" -eq 1 ]; then
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "DRY-RUN: mkdir -p $NPM_GLOBAL_PREFIX"
+    return
+  fi
+
+  run mkdir -p "$NPM_GLOBAL_PREFIX"
+}
+
+install_codex_cli() {
+  local forced="${DOTFILES_FORCE_FALLBACK_DRY_RUN:-0}"
+
+  if [ "$SKIP_PACKAGES" -eq 1 ]; then
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "DRY-RUN: npm install -g @openai/codex"
+    return
+  fi
+
+  if ! has npm; then
+    say "Skipping Codex CLI install: npm is not installed."
+    return
+  fi
+
+  if [ -x "$NPM_GLOBAL_PREFIX/bin/codex" ] && [ "$forced" != "1" ]; then
+    return
+  fi
+
+  run npm --prefix "$NPM_GLOBAL_PREFIX" install -g @openai/codex
+}
+
+check_codex_sandbox_dependencies() {
+  if [ "$SKIP_PACKAGES" -eq 1 ]; then
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "DRY-RUN: verify bubblewrap command bwrap is available for the Codex Linux sandbox"
+    return
+  fi
+
+  if ! has bwrap; then
+    say "Codex Linux sandbox dependency missing: install bubblewrap so bwrap is available."
+  fi
+}
+
 install_bash_completions() {
   local k3d_completion_dir="$HOME/.local/share/bash-completion/completions/k3d"
   local k3d_completion_file="$k3d_completion_dir/k3d_completion.sh"
@@ -567,6 +620,9 @@ report_tool_status() {
 
   has git || missing+=("git")
   has bash || missing+=("bash")
+  has npm || missing+=("npm")
+  has codex || missing+=("codex")
+  has bwrap || missing+=("bubblewrap")
   has keychain || missing+=("keychain")
   has kitty || missing+=("kitty")
   has micromamba || missing+=("micromamba")
@@ -596,6 +652,9 @@ if [ "$USE_SYSTEM_PACKAGES" -eq 1 ]; then
   install_packages
 fi
 install_missing_upstream_tools
+ensure_npm_global_dir
+install_codex_cli
+check_codex_sandbox_dependencies
 install_bash_completions
 report_tool_status
 

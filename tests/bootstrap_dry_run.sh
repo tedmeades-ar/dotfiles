@@ -20,12 +20,17 @@ for expected in \
   "DRY-RUN: install task into" \
   "DRY-RUN: install micromamba into" \
   "DRY-RUN: install k3d into" \
+  "DRY-RUN: mkdir -p" \
+  "DRY-RUN: npm install -g @openai/codex" \
   "DRY-RUN: generate task bash completion at" \
   "DRY-RUN: generate k3d bash completion at" \
   "uv" \
   "task" \
   "micromamba" \
-  "k3d"
+  "k3d" \
+  "npm" \
+  "codex" \
+  "bubblewrap"
 do
   if ! printf '%s\n' "$output" | grep -F "$expected" >/dev/null; then
     printf 'Expected dry-run output to include: %s\n' "$expected" >&2

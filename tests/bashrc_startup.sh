@@ -34,3 +34,21 @@ if printf '%s\n' "$output" | grep -E "(No such file or directory|command not fou
   printf '%s\n' "$output" >&2
   exit 1
 fi
+
+path_output="$(
+  HOME="$tmpdir/home" \
+  PATH="$tmpdir/bin:/usr/bin:/bin" \
+  TERM="xterm-256color" \
+  bash --noprofile --norc -i -c "source '$repo_root/home/dot_bashrc'; printf '%s\n' \"\$PATH\"; exit" \
+    2>/dev/null \
+  | tail -n 1
+)"
+
+case ":$path_output:" in
+  *":$tmpdir/home/.npm-global/bin:"*)
+    ;;
+  *)
+    printf 'Expected PATH to include ~/.npm-global/bin, got:\n%s\n' "$path_output" >&2
+    exit 1
+    ;;
+esac
