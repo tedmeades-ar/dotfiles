@@ -1,7 +1,7 @@
 # OPENSPEC:START
 # OpenSpec shell completions configuration
-if [ -d "/home/tobias.edmeades/.local/share/bash-completion/completions" ]; then
-  for f in "/home/tobias.edmeades/.local/share/bash-completion/completions"/*; do
+if [ -d "$HOME/.local/share/bash-completion/completions" ]; then
+  for f in "$HOME/.local/share/bash-completion/completions"/*; do
     [ -f "$f" ] && . "$f"
   done
 fi
@@ -127,29 +127,42 @@ fi
 
 # >>> mamba initialize >>>
 # !! Contents within this block are managed by 'micromamba shell init' !!
-export MAMBA_EXE='/home/tobias.edmeades/.local/bin/micromamba';
-export MAMBA_ROOT_PREFIX='/home/tobias.edmeades/micromamba';
-__mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
-if [ $? -eq 0 ]; then
-    eval "$__mamba_setup"
-else
-    alias micromamba="$MAMBA_EXE"  # Fallback on help from micromamba activate
+export MAMBA_EXE="$HOME/.local/bin/micromamba";
+export MAMBA_ROOT_PREFIX="$HOME/micromamba";
+if [ -x "$MAMBA_EXE" ]; then
+    __mamba_setup="$("$MAMBA_EXE" shell hook --shell bash --root-prefix "$MAMBA_ROOT_PREFIX" 2> /dev/null)"
+    if [ $? -eq 0 ]; then
+        eval "$__mamba_setup"
+    else
+        alias micromamba="$MAMBA_EXE"  # Fallback on help from micromamba activate
+    fi
+    unset __mamba_setup
 fi
-unset __mamba_setup
 # <<< mamba initialize <<<
 
-PATH=$PATH:~/.local/bin
-source /home/tobias.edmeades/.bash-completion/completions/task.bash
-source ~/.local/share/bash-completion/completions/k3d/k3d_completion.sh
-eval "$(uv generate-shell-completion bash)"
-eval "$(uvx --generate-shell-completion bash)"
+source_if_readable() {
+  [ -r "$1" ] && . "$1"
+}
 
-export PATH="$HOME/.cargo/bin:$PATH"
+eval_if_command() {
+  command -v "$1" >/dev/null 2>&1 && eval "$("$@")"
+}
+
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 export PATH="$PATH:$HOME/bin"
 
-. "$HOME/.cargo/env"
-eval "$(uv generate-shell-completion bash)"
-eval "$(uvx --generate-shell-completion bash)"
+source_if_readable "$HOME/.cargo/env"
+
+if command -v brew >/dev/null 2>&1; then
+  eval "$(brew shellenv)"
+elif [ -x /home/linuxbrew/.linuxbrew/bin/brew ]; then
+  eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+fi
+
+source_if_readable "$HOME/.bash-completion/completions/task.bash"
+source_if_readable "$HOME/.local/share/bash-completion/completions/k3d/k3d_completion.sh"
+eval_if_command uv generate-shell-completion bash
+eval_if_command uvx --generate-shell-completion bash
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -157,14 +170,15 @@ export NVM_DIR="$HOME/.nvm"
 
 alias obsidian="$HOME/Downloads/Obsidian-1.9.12.AppImage --no-sandbox & disown"
 
-if command -v keychain >/dev/null 2>&1; then
-  eval "$(keychain --eval --quiet ~/.ssh/id_ed25519)"
-  eval "$(keychain --eval --quiet ~/.ssh/argithub)"
+if [ -t 0 ] && command -v keychain >/dev/null 2>&1; then
+  keychain_keys=()
+  [ -f "$HOME/.ssh/id_ed25519" ] && keychain_keys+=("$HOME/.ssh/id_ed25519")
+  [ -f "$HOME/.ssh/argithub" ] && keychain_keys+=("$HOME/.ssh/argithub")
+  if [ "${#keychain_keys[@]}" -gt 0 ]; then
+    eval "$(keychain --eval --quiet --noask "${keychain_keys[@]}")"
+  fi
+  unset keychain_keys
 fi
-
-eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-eval "$(uv generate-shell-completion bash)"
-eval "$(uvx --generate-shell-completion bash)"
 
 alias countdirs='find . -maxdepth 1 -mindepth 1 -type d | wc -l'
 

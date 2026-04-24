@@ -157,6 +157,23 @@ github_arches() {
   esac
 }
 
+micromamba_platform() {
+  case "$(uname -m)" in
+    x86_64|amd64)
+      MICROMAMBA_PLATFORM="linux-64"
+      ;;
+    aarch64|arm64)
+      MICROMAMBA_PLATFORM="linux-aarch64"
+      ;;
+    ppc64le)
+      MICROMAMBA_PLATFORM="linux-ppc64le"
+      ;;
+    *)
+      MICROMAMBA_PLATFORM=""
+      ;;
+  esac
+}
+
 latest_github_asset_url() {
   local repo="$1"
   local pattern="$2"
@@ -239,6 +256,47 @@ install_github_binaries() {
   rm -rf "$tmpdir"
 }
 
+install_github_asset_binary() {
+  local repo="$1"
+  local pattern="$2"
+  local label="$3"
+  local binary="$4"
+
+  local archive
+  local tmpdir
+  local url
+
+  if [ "$(uname -s)" != "Linux" ]; then
+    say "Skipping $label fallback: GitHub binary fallback is only configured for Linux."
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "DRY-RUN: install $label into $BIN_DIR from GitHub release ${repo} matching ${pattern}"
+    return
+  fi
+
+  if ! has curl; then
+    say "Skipping $label fallback: curl is not installed."
+    return
+  fi
+
+  url="$(latest_github_asset_url "$repo" "$pattern")"
+  if [ -z "$url" ]; then
+    say "Skipping $label fallback: no matching release asset found for pattern ${pattern}."
+    return
+  fi
+
+  tmpdir="$(mktemp -d)"
+  archive="$tmpdir/$binary"
+
+  ensure_bin_dir
+  say "Installing $label into $BIN_DIR from $url"
+  curl -fsSL "$url" -o "$archive"
+  run install -m 0755 "$archive" "$BIN_DIR/$binary"
+  rm -rf "$tmpdir"
+}
+
 install_github_source_file() {
   local repo="$1"
   local label="$2"
@@ -284,6 +342,45 @@ install_github_source_file() {
   rm -rf "$tmpdir"
 }
 
+install_micromamba_local() {
+  local archive
+  local tmpdir
+  local url
+
+  if [ "$(uname -s)" != "Linux" ]; then
+    say "Skipping micromamba local install: use the platform installer for $(uname -s)."
+    return
+  fi
+
+  micromamba_platform
+  if [ -z "$MICROMAMBA_PLATFORM" ]; then
+    say "Skipping micromamba local install: unsupported CPU architecture $(uname -m)."
+    return
+  fi
+
+  url="https://micro.mamba.pm/api/micromamba/${MICROMAMBA_PLATFORM}/latest"
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "DRY-RUN: install micromamba into $BIN_DIR from $url"
+    return
+  fi
+
+  if ! has curl; then
+    say "Skipping micromamba: curl is required to download the installer."
+    return
+  fi
+
+  tmpdir="$(mktemp -d)"
+  archive="$tmpdir/micromamba.tar.bz2"
+
+  ensure_bin_dir
+  say "Installing micromamba into $BIN_DIR from $url"
+  curl -fsSL "$url" -o "$archive"
+  tar -xjf "$archive" -C "$tmpdir" bin/micromamba
+  run install -m 0755 "$tmpdir/bin/micromamba" "$BIN_DIR/micromamba"
+  rm -rf "$tmpdir"
+}
+
 install_kitty_local() {
   local installer
   local tmpdir
@@ -317,6 +414,46 @@ install_kitty_local() {
   rm -rf "$tmpdir"
 }
 
+install_bash_completions() {
+  local k3d_completion_dir="$HOME/.local/share/bash-completion/completions/k3d"
+  local k3d_completion_file="$k3d_completion_dir/k3d_completion.sh"
+  local task_completion_dir="$HOME/.bash-completion/completions"
+  local task_completion_file="$task_completion_dir/task.bash"
+  local tmpfile
+
+  if [ "$SKIP_PACKAGES" -eq 1 ]; then
+    return
+  fi
+
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "DRY-RUN: generate task bash completion at $task_completion_file"
+    say "DRY-RUN: generate k3d bash completion at $k3d_completion_file"
+    return
+  fi
+
+  if has task; then
+    run mkdir -p "$task_completion_dir"
+    tmpfile="$(mktemp)"
+    if task --completion bash > "$tmpfile"; then
+      run install -m 0644 "$tmpfile" "$task_completion_file"
+    else
+      say "Skipping task completion: task --completion bash failed."
+    fi
+    rm -f "$tmpfile"
+  fi
+
+  if has k3d; then
+    run mkdir -p "$k3d_completion_dir"
+    tmpfile="$(mktemp)"
+    if k3d completion bash > "$tmpfile"; then
+      run install -m 0644 "$tmpfile" "$k3d_completion_file"
+    else
+      say "Skipping k3d completion: k3d completion bash failed."
+    fi
+    rm -f "$tmpfile"
+  fi
+}
+
 install_missing_upstream_tools() {
   local forced="${DOTFILES_FORCE_FALLBACK_DRY_RUN:-0}"
 
@@ -333,6 +470,10 @@ install_missing_upstream_tools() {
 
   install_kitty_local
 
+  if ! has micromamba || [ "$forced" = "1" ]; then
+    install_micromamba_local
+  fi
+
   if ! has keychain || [ "$forced" = "1" ]; then
     install_github_source_file \
       "danielrobbins/keychain" \
@@ -346,6 +487,30 @@ install_missing_upstream_tools() {
       "Linux_${GITHUB_LAZYGIT_ARCH}\\.tar\\.gz$" \
       "lazygit" \
       lazygit
+  fi
+
+  if ! has uv || ! has uvx || [ "$forced" = "1" ]; then
+    install_github_binaries \
+      "astral-sh/uv" \
+      "uv-${GITHUB_RUST_ARCH}-unknown-linux-gnu\\.tar\\.gz$" \
+      "uv" \
+      uv uvx
+  fi
+
+  if ! has task || [ "$forced" = "1" ]; then
+    install_github_binaries \
+      "go-task/task" \
+      "task_linux_${GITHUB_FZF_ARCH}\\.tar\\.gz$" \
+      "task" \
+      task
+  fi
+
+  if ! has k3d || [ "$forced" = "1" ]; then
+    install_github_asset_binary \
+      "k3d-io/k3d" \
+      "k3d-linux-${GITHUB_FZF_ARCH}$" \
+      "k3d" \
+      k3d
   fi
 
   if ! has zellij || [ "$forced" = "1" ]; then
@@ -404,9 +569,14 @@ report_tool_status() {
   has bash || missing+=("bash")
   has keychain || missing+=("keychain")
   has kitty || missing+=("kitty")
+  has micromamba || missing+=("micromamba")
   has zellij || missing+=("zellij")
   has lazygit || missing+=("lazygit")
   has yazi || missing+=("yazi")
+  has uv || missing+=("uv")
+  has uvx || missing+=("uvx")
+  has task || missing+=("task")
+  has k3d || missing+=("k3d")
   has rg || missing+=("ripgrep")
   { has fd || has fdfind; } || missing+=("fd/fdfind")
   has fzf || missing+=("fzf")
@@ -426,6 +596,7 @@ if [ "$USE_SYSTEM_PACKAGES" -eq 1 ]; then
   install_packages
 fi
 install_missing_upstream_tools
+install_bash_completions
 report_tool_status
 
 if [ "$DRY_RUN" -eq 1 ]; then
