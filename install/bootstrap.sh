@@ -163,7 +163,7 @@ latest_github_asset_url() {
 
   curl -fsSL "https://api.github.com/repos/${repo}/releases/latest" \
     | sed -n 's/.*"browser_download_url": "\(.*\)".*/\1/p' \
-    | awk -v pattern="$pattern" '$0 ~ pattern { print; exit }'
+    | grep -E -m 1 "$pattern"
 }
 
 latest_github_tarball_url() {
