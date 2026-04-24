@@ -159,7 +159,9 @@ alias obsidian="$HOME/Downloads/Obsidian-1.9.12.AppImage --no-sandbox & disown"
 
 if command -v keychain >/dev/null 2>&1; then
   eval "$(keychain --eval --quiet ~/.ssh/id_ed25519)"
+  eval "$(keychain --eval --quiet ~/.ssh/argithub)"
 fi
+
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 eval "$(uv generate-shell-completion bash)"
 eval "$(uvx --generate-shell-completion bash)"
