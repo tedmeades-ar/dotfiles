@@ -8,6 +8,7 @@ Install the tools that make the copied configs useful:
 - `lazygit`
 - `yazi`
 - `git`
+- `keychain`
 - `ripgrep`
 - `fd`
 - `fzf`
@@ -16,7 +17,8 @@ Install the tools that make the copied configs useful:
 
 Also install the same Nerd Font used by your terminal profile.
 
-`install/bootstrap.sh` attempts to install these using `apt-get`, `pacman`,
-`dnf`, or `brew`. Some distributions do not package every tool under the same
-name, so the script reports packages it could not install and still configures
-the symlinks.
+`install/bootstrap.sh` installs most CLI tools into `~/.local/bin` from
+prebuilt upstream releases by default. Use `--use-system-packages` to prefer
+`apt-get`, `pacman`, `dnf`, or `brew` instead.
+
+Clipboard utilities are still best installed by the OS package manager.

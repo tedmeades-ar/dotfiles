@@ -157,7 +157,9 @@ export NVM_DIR="$HOME/.nvm"
 
 alias obsidian="$HOME/Downloads/Obsidian-1.9.12.AppImage --no-sandbox & disown"
 
-eval $(keychain --eval --quiet ~/.ssh/id_ed25519)
+if command -v keychain >/dev/null 2>&1; then
+  eval "$(keychain --eval --quiet ~/.ssh/id_ed25519)"
+fi
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 eval "$(uv generate-shell-completion bash)"
 eval "$(uvx --generate-shell-completion bash)"
@@ -171,3 +173,11 @@ zj() {
   zellij attach --create toby
 }
 
+function cd() {
+    builtin cd "$@"
+    if [[ "$PWD" == "/home/tobias.edmeades/my_ws/imitation_learning"* ]]; then
+        micromamba activate il 2>/dev/null
+    elif [[ "$PWD" == "/home/tobias.edmeades/my_ws/data-foundry-isa"* ]]; then
+        micromamba activate df 2>/dev/null
+    fi
+}

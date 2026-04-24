@@ -28,8 +28,9 @@ cd ~/Documents/dotfiles
 ./install/bootstrap.sh
 ```
 
-The bootstrap script installs common workflow packages where your OS package
-manager supports them, then symlinks the tracked files into `$HOME`.
+The bootstrap script installs common workflow tools into `~/.local/bin` without
+sudo where prebuilt binaries are available, then symlinks the tracked files into
+`$HOME`.
 
 Preview link changes without touching the machine:
 
@@ -41,6 +42,12 @@ Skip package installation and only configure symlinks:
 
 ```bash
 ./install/bootstrap.sh --skip-packages
+```
+
+Use your OS package manager instead:
+
+```bash
+./install/bootstrap.sh --use-system-packages
 ```
 
 Existing files that are not already the right symlink are moved aside to a
